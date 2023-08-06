@@ -1,3 +1,4 @@
+import os.path
 import csv
 
 
@@ -27,7 +28,7 @@ class Item:
         self.__name = name
         self.price = price
         self.quantity = quantity
-        self.__class__.all.append(self)
+        self.all.append(self)
 
     def __repr__(self):
         return f"{self.__class__.__name__}('{self.__name}', {self.price}, {self.quantity})"
@@ -40,37 +41,53 @@ class Item:
         Рассчитывает общую стоимость конкретного товара в магазине.
         :return: Общая стоимость товара.
         """
-        summ = self.price * self.quantity
-        return summ
+        total_price = self.price * self.quantity
+        return total_price
 
-    def apply_discount(self) -> float:
+    def apply_discount(self) -> None:
         """
         Применяет установленную скидку для конкретного товара.
         """
-        new_price = self.price * self.pay_rate
-        self.price = new_price
-        return new_price
+        self.price = self.price * self.pay_rate
+
+    def __add__(self, other):
+        if not isinstance(other, Item):
+            raise ValueError('Не дочерний класс Item')
+        return self.quantity + other.quantity
 
     @property
     def name(self):
         return self.__name
 
     @name.setter
-    def name(self, new_name: str) -> Exception:
-        if len(new_name) > 10:
-            return Exception(f"Длина наименования товара превышает 10 символов.")
-        self.__name = new_name
+    def name(self, name):
+        if len(name) <= 10:
+            self.__name = name
+        else:
+            raise Exception('Длина наименования товара превышает 10 символов.')
 
     @classmethod
-    def instantiate_from_csv(cls, csv_path='../src/items.csv'):
+    def instantiate_from_csv(cls, file=os.path.join(os.path.dirname(__file__), 'items.csv')):
+        """
+        класс-метод, инициализирующий экземпляры класса `Item` данными из файла _src/items.csv_
+        """
         cls.all = []
-        with open(csv_path) as file_items:
-            items = csv.DictReader(file_items, delimiter=',')
-            [cls(row['name'], row['price'], row['quantity']) for row in items]
+        try:
+            with open(file, 'r', newline='', encoding='cp1251') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for i in reader:
+                    if list(i) == ['name', 'price', 'quantity']:
+                        name, price, quantity = i['name'], float(i['price']), int(i['quantity'])
+                        cls(name, price, quantity)
+                    else:
+                        raise InstantiateCSVError('Файл item.csv поврежден')
+        except FileNotFoundError:
+            raise FileNotFoundError('Отсутствует файл item.csv')
 
     @staticmethod
-    def string_to_number(str_num: str) -> int:
-        return int(float(str_num))
-
-    def __str__(self):
-        return f"{self.name}"
+    def string_to_number(num):
+        """
+        статический метод, возвращающий число из числа-строки
+        """
+        number = int(float(num))
+        return number
